@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Manage Subjects{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 3</div>
+        <h1>Subjects</h1>
+        <p>Add every subject once using its official subject code.</p>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Add Subject</h2>
+        <form method="post" class="admin-form">
+            <label>Department</label>
+            <select name="department_id" required>
+                <option value="">Select department</option>
+                {% for item in departments %}
+                    <option value="{{ item.id }}">
+                        {{ item.department_code }} — {{ item.department_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Subject Code</label>
+            <input name="subject_code" placeholder="ITA0510" required>
+
+            <label>Subject Name</label>
+            <input name="subject_name" placeholder="Computer Vision" required>
+
+            <button class="button primary full" type="submit">
+                Add Subject
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Existing Subjects</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Subject</th>
+                        <th>Department</th>
+                        <th>Course Assignments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in subjects %}
+                    <tr>
+                        <td><strong>{{ item.subject_code }}</strong></td>
+                        <td>{{ item.subject_name }}</td>
+                        <td>{{ item.department_code }}</td>
+                        <td>{{ item.offering_count }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No subjects added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

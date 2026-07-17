@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Manage Classes{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 2</div>
+        <h1>Classes and Sections</h1>
+        <p>Create the class that contains the group of students.</p>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Add Class</h2>
+        <form method="post" class="admin-form">
+            <label>Department</label>
+            <select name="department_id" required>
+                <option value="">Select department</option>
+                {% for item in departments %}
+                    <option value="{{ item.id }}">
+                        {{ item.department_code }} — {{ item.department_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Programme / Class Name</label>
+            <input name="class_name" placeholder="B.Tech CSE" required>
+
+            <label>Year</label>
+            <input name="year_label" placeholder="III Year" required>
+
+            <label>Section</label>
+            <input name="section" placeholder="A" required>
+
+            <button class="button primary full" type="submit">
+                Add Class
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Existing Classes</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Class</th>
+                        <th>Year</th>
+                        <th>Section</th>
+                        <th>Students</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in classes %}
+                    <tr>
+                        <td>{{ item.department_code }}</td>
+                        <td>{{ item.class_name }}</td>
+                        <td>{{ item.year_label }}</td>
+                        <td>{{ item.section }}</td>
+                        <td>{{ item.student_count }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">No classes added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

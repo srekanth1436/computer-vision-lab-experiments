@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Attendance Reports{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">{{ role|upper }} REPORTS</div>
+        <h1>Attendance Reports</h1>
+        <p>View session history, student percentages, permission reasons and detailed records.</p>
+    </div>
+    <button class="button secondary" type="button" onclick="window.print()">Print Report</button>
+</div>
+
+<section class="panel report-filter-panel">
+    <h2>Filter Report</h2>
+    <form method="get" class="report-filter-grid">
+        <div>
+            <label>Course / Subject</label>
+            <select name="offering_id">
+                <option value="">All courses</option>
+                {% for item in offerings %}
+                <option value="{{ item.id }}" {% if filters.offering_id == item.id|string %}selected{% endif %}>
+                    {{ item.subject_code }} · {{ item.slot_name }} · {{ item.year_label }} {{ item.section }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Class</label>
+            <select name="class_id">
+                <option value="">All classes</option>
+                {% for item in classes %}
+                <option value="{{ item.id }}" {% if filters.class_id == item.id|string %}selected{% endif %}>
+                    {{ item.department_code }} · {{ item.year_label }} · Section {{ item.section }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Student</label>
+            <select name="student_id">
+                <option value="">All students</option>
+                {% for item in students %}
+                <option value="{{ item.id }}" {% if filters.student_id == item.id|string %}selected{% endif %}>
+                    {{ item.register_no }} — {{ item.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Attendance Status</label>
+            <select name="record_status">
+                <option value="">All statuses</option>
+                {% for value, label in [('present','Present'),('present_permission','Permission Present'),('absent','Absent'),('pending','Pending')] %}
+                <option value="{{ value }}" {% if filters.record_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Session Status</label>
+            <select name="session_status">
+                <option value="">All sessions</option>
+                {% for value, label in [('submitted','Submitted'),('draft','Draft'),('cancelled','Cancelled')] %}
+                <option value="{{ value }}" {% if filters.session_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>From Date</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}">
+        </div>
+
+        <div>
+            <label>To Date</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}">
+        </div>
+
+        <div class="report-filter-actions">
+            <button class="button primary" type="submit">Apply Filters</button>
+            <a class="button secondary" href="{{ url_for('attendance_reports') }}">Clear</a>
+        </div>
+    </form>
+</section>
+
+<div class="stats-grid report-stats">
+    <div class="stat-card"><span>Records</span><strong>{{ summary.records }}</strong></div>
+    <div class="stat-card"><span>Face Present</span><strong>{{ summary.present }}</strong></div>
+    <div class="stat-card"><span>Permission</span><strong>{{ summary.permission }}</strong></div>
+    <div class="stat-card"><span>Absent</span><strong>{{ summary.absent }}</strong></div>
+    <div class="stat-card"><span>Pending</span><strong>{{ summary.pending }}</strong></div>
+</div>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div><h2>Subject and Class Summary</h2><p>Calculated from submitted sessions only.</p></div>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Subject</th><th>Slot</th><th>Teacher</th><th>Class</th><th>Sessions</th><th>Face</th><th>Permission</th><th>Absent</th><th>Overall %</th></tr></thead>
+            <tbody>
+                {% for item in course_summaries %}
+                <tr>
+                    <td><strong>{{ item.subject_code }}</strong><br>{{ item.subject_name }}</td>
+                    <td>{{ item.slot_name }}</td>
+                    <td>{{ item.teacher_name }}</td>
+                    <td>{{ item.year_label }} · Section {{ item.section }}</td>
+                    <td>{{ item.conducted_sessions }}</td>
+                    <td>{{ item.face_present or 0 }}</td>
+                    <td>{{ item.permission_present or 0 }}</td>
+                    <td>{{ item.absent_records or 0 }}</td>
+                    <td><strong>{{ item.attendance_percentage }}%</strong></td>
+                </tr>
+                {% else %}<tr><td colspan="9">No submitted attendance data found.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div><h2>Student Subject Percentage</h2><p>Each row shows one student's record for one subject.</p></div>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Register No.</th><th>Student</th><th>Subject</th><th>Slot</th><th>Conducted</th><th>Attended</th><th>Absent</th><th>Permission</th><th>Percentage</th></tr></thead>
+            <tbody>
+                {% for item in student_summaries %}
+                <tr>
+                    <td><strong>{{ item.register_no }}</strong></td>
+                    <td>{{ item.student_name }}</td>
+                    <td>{{ item.subject_code }} — {{ item.subject_name }}</td>
+                    <td>{{ item.slot_name }}</td>
+                    <td>{{ item.conducted }}</td>
+                    <td>{{ item.attended }}</td>
+                    <td>{{ item.absent }}</td>
+                    <td>{{ item.permission_count }}</td>
+                    <td><span class="percentage-pill {% if item.percentage < 75 %}low{% endif %}">{{ item.percentage }}%</span></td>
+                </tr>
+                {% else %}<tr><td colspan="9">No student summary found.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-heading"><div><h2>Class Session History</h2><p>Draft and cancelled sessions are visible but do not count in percentage.</p></div></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Date</th><th>Subject</th><th>Slot</th><th>Teacher</th><th>Class</th><th>Session</th><th>Face</th><th>Permission</th><th>Absent</th><th>Pending / Reason</th></tr></thead>
+            <tbody>
+                {% for item in session_history %}
+                <tr>
+                    <td>{{ item.session_date }}</td>
+                    <td><strong>{{ item.subject_code }}</strong><br>{{ item.subject_name }}</td>
+                    <td>{{ item.slot_name }}</td>
+                    <td>{{ item.teacher_name }}</td>
+                    <td>{{ item.year_label }} · {{ item.section }}</td>
+                    <td><span class="status {{ item.status }}">{{ item.status|title }}</span></td>
+                    <td>{{ item.face_present or 0 }}</td>
+                    <td>{{ item.permission_present or 0 }}</td>
+                    <td>{{ item.absent_count or 0 }}</td>
+                    <td>{% if item.status == 'cancelled' %}{{ item.cancel_reason or 'No reason' }}{% else %}{{ item.pending_count or 0 }}{% endif %}</td>
+                </tr>
+                {% else %}<tr><td colspan="10">No attendance sessions found.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-heading"><div><h2>Detailed Attendance Records</h2><p>Maximum 1,000 rows are shown after filtering.</p></div></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Date</th><th>Register No.</th><th>Student</th><th>Subject</th><th>Class</th><th>Session</th><th>Attendance</th><th>Method</th><th>Reason</th></tr></thead>
+            <tbody>
+                {% for item in records %}
+                <tr>
+                    <td>{{ item.session_date }}</td>
+                    <td><strong>{{ item.register_no }}</strong></td>
+                    <td>{{ item.student_name }}</td>
+                    <td>{{ item.subject_code }} · {{ item.slot_name }}</td>
+                    <td>{{ item.year_label }} · {{ item.section }}</td>
+                    <td><span class="status {{ item.session_status }}">{{ item.session_status|title }}</span></td>
+                    <td><span class="status {{ item.attendance_status }}">{{ item.attendance_status.replace('_',' ')|title }}</span></td>
+                    <td>{{ item.method.replace('_',' ')|title }}</td>
+                    <td>{{ item.reason or '—' }}</td>
+                </tr>
+                {% else %}<tr><td colspan="9">No detailed records match the selected filters.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

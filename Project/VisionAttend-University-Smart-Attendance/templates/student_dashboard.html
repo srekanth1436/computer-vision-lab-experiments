@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<div class="heading"><div><p class="eyebrow">STUDENT</p><h1>{{ student.full_name }}</h1><p>Register Number: {{ student.register_no }}</p></div></div>
+<section class="panel">
+    <h2>Subject-wise attendance</h2>
+    <p>Only submitted classes are counted. Draft and cancelled classes are ignored.</p>
+    <div class="course-grid">
+    {% for course in courses %}
+        <article class="course-card">
+            <div class="row"><div><b>{{ course.subject_code }}</b><h3>{{ course.subject_name }}</h3></div><span class="pill">{{ course.slot_name }}</span></div>
+            <div class="percentage">{{ course.percentage }}%</div>
+            <div class="mini"><div>Conducted<b>{{ course.conducted }}</b></div><div>Attended<b>{{ course.attended }}</b></div><div>Absent<b>{{ course.absent }}</b></div><div>Permission<b>{{ course.permission_count }}</b></div></div>
+        </article>
+    {% else %}<div class="empty">No enrolled subjects found.</div>{% endfor %}
+    </div>
+</section>
+{% endblock %}

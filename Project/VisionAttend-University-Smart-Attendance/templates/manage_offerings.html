@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Course Assignments{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 6</div>
+        <h1>Course Assignments</h1>
+        <p>
+            Connect a subject with its class, slot, teacher and room.
+            The master slot timetable is applied automatically.
+        </p>
+    </div>
+</div>
+
+<section class="panel">
+    <h2>Create Course Assignment</h2>
+
+    <form method="post" class="admin-form form-grid">
+        <div>
+            <label>Subject</label>
+            <select name="subject_id" required>
+                <option value="">Select subject</option>
+                {% for item in subjects %}
+                <option value="{{ item.id }}">
+                    {{ item.subject_code }} — {{ item.subject_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Class</label>
+            <select name="class_id" required>
+                <option value="">Select class</option>
+                {% for item in classes %}
+                <option value="{{ item.id }}">
+                    {{ item.department_code }} ·
+                    {{ item.year_label }} · Section {{ item.section }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Slot</label>
+            <select name="slot_id" required>
+                <option value="">Select slot</option>
+                {% for item in slots %}
+                <option value="{{ item.id }}">{{ item.slot_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Teacher</label>
+            <select name="teacher_id" required>
+                <option value="">Select teacher</option>
+                {% for item in teachers %}
+                <option value="{{ item.id }}">
+                    {{ item.employee_no }} — {{ item.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Room / Lab</label>
+            <input name="room_name" placeholder="Example: CV Lab">
+        </div>
+
+        <div>
+            <label>Academic Year</label>
+            <input name="academic_year" value="2026-2027" required>
+        </div>
+
+        <div>
+            <label>Semester</label>
+            <input name="semester" placeholder="Semester 5" required>
+        </div>
+
+        <button class="button primary" type="submit">
+            Create Assignment
+        </button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Current Course Assignments</h2>
+            <p>
+                Weekly timings come automatically from the assigned slot.
+            </p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Slot</th>
+                    <th>Teacher</th>
+                    <th>Class</th>
+                    <th>Room</th>
+                    <th>Academic Period</th>
+                    <th>Students</th>
+                    <th>Weekly Rows</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in offerings %}
+                <tr>
+                    <td>
+                        <strong>{{ item.subject_code }}</strong><br>
+                        {{ item.subject_name }}
+                    </td>
+
+                    <td>{{ item.slot_name }}</td>
+                    <td>{{ item.teacher_name }}</td>
+
+                    <td>
+                        {{ item.class_name }} · {{ item.year_label }} ·
+                        Section {{ item.section }}
+                    </td>
+
+                    <td>
+                        <form
+                            method="post"
+                            class="inline-room-form"
+                            action="{{ url_for(
+                                'update_offering_room',
+                                offering_id=item.id
+                            ) }}"
+                        >
+                            <input
+                                name="room_name"
+                                value="{{ item.room_name or '' }}"
+                                placeholder="Room / Lab"
+                            >
+                            <button class="button secondary small" type="submit">
+                                Save
+                            </button>
+                        </form>
+                    </td>
+
+                    <td>
+                        {{ item.academic_year }} · {{ item.semester }}
+                    </td>
+
+                    <td>{{ item.student_count }}</td>
+                    <td>{{ item.timetable_count }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">No course assignments created yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

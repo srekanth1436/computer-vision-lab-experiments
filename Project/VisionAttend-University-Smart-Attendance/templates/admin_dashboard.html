@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN CONTROL PANEL</div>
+        <h1>University attendance setup</h1>
+        <p>
+            Add the university structure first, and then create timetable-based attendance.
+        </p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <a class="stat-card link-card" href="{{ url_for('manage_departments') }}">
+        <span>Departments</span><strong>{{ counts.departments }}</strong>
+    </a>
+    <a class="stat-card link-card" href="{{ url_for('manage_classes') }}">
+        <span>Classes</span><strong>{{ counts.classes }}</strong>
+    </a>
+    <a class="stat-card link-card" href="{{ url_for('manage_subjects') }}">
+        <span>Subjects</span><strong>{{ counts.subjects }}</strong>
+    </a>
+    <a class="stat-card link-card" href="{{ url_for('manage_teachers') }}">
+        <span>Teachers</span><strong>{{ counts.teachers }}</strong>
+    </a>
+    <a class="stat-card link-card" href="{{ url_for('manage_students') }}">
+        <span>Students</span><strong>{{ counts.students }}</strong>
+    </a>
+    <a class="stat-card link-card" href="{{ url_for('manage_offerings') }}">
+        <span>Course Assignments</span><strong>{{ counts.offerings }}</strong>
+    </a>
+</div>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h2>University slots</h2>
+            <p>All attendance is connected to the correct subject, class and slot.</p>
+        </div>
+    </div>
+
+    <div class="slot-grid">
+        {% for slot in slots %}
+            <div class="slot-card slot-{{ slot.slot_code|lower }}">
+                <strong>{{ slot.slot_name }}</strong>
+                <span>Available for subject assignment</span>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Setup order</h2>
+    <div class="workflow-grid">
+        <a href="{{ url_for('manage_departments') }}"><b>1</b> Add Department</a>
+        <a href="{{ url_for('manage_classes') }}"><b>2</b> Add Class & Section</a>
+        <a href="{{ url_for('manage_subjects') }}"><b>3</b> Add Subjects</a>
+        <a href="{{ url_for('manage_teachers') }}"><b>4</b> Add Teachers</a>
+        <a href="{{ url_for('manage_students') }}"><b>5</b> Add Students</a>
+        <a href="{{ url_for('manage_offerings') }}"><b>6</b> Assign Subject & Slot</a>
+        <a href="{{ url_for('manage_enrollments') }}"><b>7</b> Enrol Students</a>
+        <a href="{{ url_for('manage_timetable') }}"><b>8</b> Create Timetable</a>
+    </div>
+</section>
+{% endblock %}

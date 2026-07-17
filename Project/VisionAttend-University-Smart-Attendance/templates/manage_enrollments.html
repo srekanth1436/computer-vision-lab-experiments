@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Manage Enrolments{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 7</div>
+        <h1>Course Enrolments</h1>
+        <p>Enrol one student or all students belonging to the assigned class.</p>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Enrol Students</h2>
+        <form method="post" class="admin-form">
+            <label>Course Assignment</label>
+            <select name="offering_id" required>
+                <option value="">Select course</option>
+                {% for item in offerings %}
+                    <option value="{{ item.id }}">
+                        {{ item.subject_code }} · {{ item.slot_name }} ·
+                        {{ item.year_label }} {{ item.section }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>One Student</label>
+            <select name="student_id">
+                <option value="">Select student</option>
+                {% for item in students %}
+                    <option value="{{ item.id }}">
+                        {{ item.register_no }} — {{ item.full_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button class="button primary full" name="action" value="single">
+                Enrol Selected Student
+            </button>
+
+            <div class="separator">OR</div>
+
+            <button class="button success full" name="action" value="bulk">
+                Enrol All Students from Assigned Class
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Recent Enrolments</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Register No.</th>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Slot</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recent %}
+                    <tr>
+                        <td>{{ item.register_no }}</td>
+                        <td>{{ item.full_name }}</td>
+                        <td>{{ item.subject_code }}</td>
+                        <td>{{ item.slot_name }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No enrolments added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

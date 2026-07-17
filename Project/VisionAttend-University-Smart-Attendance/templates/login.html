@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Login | VisionAttend
+{% endblock %}
+
+{% block content %}
+<section class="login-card">
+    <div class="login-info">
+        <p class="eyebrow">SMART ATTENDANCE MANAGEMENT SYSTEM</p>
+
+        <h1>University-Wide Smart Attendance</h1>
+
+        <p>
+            Accurate face-recognition attendance for every class,
+            subject, teacher and university slot.
+        </p>
+
+        <div class="slots">
+            <span>A</span>
+            <span>B</span>
+            <span>C</span>
+            <span>D</span>
+        </div>
+
+        <div class="login-features">
+            <p>Face Recognition Attendance</p>
+            <p>Teacher Permission with Reason</p>
+            <p>Draft Review and Final Submission</p>
+            <p>Subject-Wise Attendance Percentage</p>
+        </div>
+    </div>
+
+    <form method="post" class="login-form">
+        <div class="login-logo">VA</div>
+
+        <h2>Welcome Back</h2>
+
+        <p class="login-subtitle">
+            Sign in using your university account
+        </p>
+
+        <label for="username">Username</label>
+
+        <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter your username"
+            autocomplete="username"
+            required
+        >
+
+        <label for="password">Password</label>
+
+        <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+        >
+
+        <button class="button primary full" type="submit">
+            Sign In
+        </button>
+
+        <div class="secure-message">
+            Authorized university users only
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,75 @@
+UNIVERSITY SMART ATTENDANCE WEBSITE - PHASE 1
+=============================================
+
+WHAT IS INCLUDED
+----------------
+1. Admin, teacher and student login.
+2. Slots A, B, C and D.
+3. Subject + class + slot + teacher database structure.
+4. Teacher's today's timetable.
+5. Start Attendance as Draft for 10 minutes.
+6. Manual Permission Present with compulsory reason.
+7. Submit Attendance:
+   - Present stays Present.
+   - Permission stays Present with Permission.
+   - Pending becomes Absent.
+   - Only then does percentage update.
+8. Cancel Class with reason. Cancelled classes do not count.
+9. Student subject-wise conducted, attended, absent, permission and percentage.
+10. Temporary Face Test button. OpenCV connection is Phase 2.
+
+WINDOWS SETUP
+-------------
+1. Start MySQL in XAMPP.
+2. Extract this ZIP.
+3. Open the extracted folder in VS Code.
+4. Open Terminal -> New Terminal.
+5. Install packages:
+
+   python -m pip install -r requirements.txt
+
+6. Create the database:
+
+   python init_db.py
+
+7. Start the website:
+
+   python app.py
+
+8. Open Chrome:
+
+   http://127.0.0.1:5000
+
+DEMO LOGINS
+-----------
+Admin   : admin / admin123
+Teacher : jeena / teacher123
+Student : sreekanth / student123
+
+MYSQL DEFAULT
+-------------
+User: root
+Password: empty
+Database: smart_attendance
+
+If your MySQL password is not empty, open config.py and change:
+MYSQL_PASSWORD = "your_password"
+
+IMPORTANT TIMETABLE TEST
+------------------------
+The demo class is Monday from 1:00 PM to 3:00 PM.
+If today is not Monday, open phpMyAdmin -> smart_attendance -> timetable_entries.
+Change day_of_week to today's number:
+0 Monday
+1 Tuesday
+2 Wednesday
+3 Thursday
+4 Friday
+5 Saturday
+6 Sunday
+
+DRAFT RULE
+----------
+If the teacher starts attendance but does not click Submit Attendance,
+it remains Draft. It does not count as Present, Absent, Class Conducted,
+or percentage.

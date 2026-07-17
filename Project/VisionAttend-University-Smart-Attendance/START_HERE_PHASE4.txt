@@ -1,0 +1,33 @@
+UNIVERSITY SMART ATTENDANCE — PHASE 4 REPORTS
+==============================================
+
+NEW FEATURE
+-----------
+Admin and Teachers now have a Reports menu.
+
+Reports include:
+- Subject and class summary
+- Student subject-wise percentage
+- Conducted, attended, absent and permission counts
+- Draft, submitted and cancelled session history
+- Detailed attendance method and permission reason
+- Filters for course, class, student, status and date
+- Print Report button
+
+UPDATE STEPS
+------------
+1. Stop the current Flask website with Ctrl+C.
+2. Open this Phase 4 folder in VS Code.
+3. Keep XAMPP MySQL running.
+4. Run:
+
+   python -m pip install -r requirements.txt
+   python init_db.py
+   python app.py
+
+5. Open http://127.0.0.1:5000
+6. Login as Admin or Teacher.
+7. Click Reports in the top menu.
+
+The existing smart_attendance MySQL data is reused.
+No attendance records are deleted.

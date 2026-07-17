@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Master Slot Timetable{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 8</div>
+        <h1>Master Slot Timetable</h1>
+        <p>
+            Set Slot A, B, C and D timings once.
+            Every course assigned to that slot receives the same weekly timing automatically.
+        </p>
+    </div>
+
+    <form method="post" action="{{ url_for('sync_master_timetable') }}">
+        <button class="button secondary" type="submit">
+            Synchronize All Courses
+        </button>
+    </form>
+</div>
+
+<section class="notice">
+    <strong>How it works:</strong>
+    Add a weekly timing for a slot once. For example, when Slot B is
+    Tuesday 6:00 PM–7:00 PM, every active Slot B course receives that
+    timetable row automatically. Each course keeps its own teacher,
+    class, students and room.
+</section>
+
+<section class="panel">
+    <h2>Add Master Slot Timing</h2>
+
+    <form method="post" class="admin-form form-grid">
+        <div>
+            <label>Slot</label>
+            <select name="slot_id" required>
+                <option value="">Select slot</option>
+                {% for item in slots %}
+                <option value="{{ item.id }}">{{ item.slot_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Day</label>
+            <select name="day_of_week" required>
+                {% for day in DAY_NAMES %}
+                <option value="{{ loop.index0 }}">{{ day }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Start Time</label>
+            <input type="time" name="start_time" required>
+        </div>
+
+        <div>
+            <label>End Time</label>
+            <input type="time" name="end_time" required>
+        </div>
+
+        <button class="button primary" type="submit">
+            Add Master Timing
+        </button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Weekly Slot View</h2>
+            <p>All master timings arranged by weekday.</p>
+        </div>
+    </div>
+
+    <div class="week-board">
+        {% for day in DAY_NAMES %}
+        <div class="day-column">
+            <h3>{{ day }}</h3>
+
+            {% for item in weekly[loop.index0] %}
+            <article class="master-slot-card slot-border-{{ item.slot_code|lower }}">
+                <div class="row">
+                    <strong>{{ item.slot_name }}</strong>
+                    <span class="pill">
+                        {{ item.start_time }}–{{ item.end_time }}
+                    </span>
+                </div>
+
+                <small>
+                    Courses: {{ item.course_count }} ·
+                    Applied: {{ item.applied_count }}
+                </small>
+
+                <div class="master-actions">
+                    <a
+                        class="button secondary small"
+                        href="{{ url_for(
+                            'edit_slot_schedule',
+                            schedule_id=item.id
+                        ) }}"
+                    >
+                        Edit
+                    </a>
+
+                    <form
+                        method="post"
+                        action="{{ url_for(
+                            'delete_slot_schedule',
+                            schedule_id=item.id
+                        ) }}"
+                        onsubmit="return confirm(
+                            'Delete this master slot timing? Attendance history will be preserved.'
+                        );"
+                    >
+                        <button class="button danger small" type="submit">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </article>
+            {% else %}
+            <div class="day-empty">No slot timing</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Generated Course Timetable</h2>
+            <p>
+                These rows are used by teacher dashboards and attendance sessions.
+            </p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Time</th>
+                    <th>Subject</th>
+                    <th>Slot</th>
+                    <th>Teacher</th>
+                    <th>Class</th>
+                    <th>Room</th>
+                    <th>Source</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in timetable %}
+                <tr>
+                    <td><strong>{{ DAY_NAMES[item.day_of_week] }}</strong></td>
+                    <td>{{ item.start_time }} – {{ item.end_time }}</td>
+
+                    <td>
+                        <strong>{{ item.subject_code }}</strong><br>
+                        {{ item.subject_name }}
+                    </td>
+
+                    <td>{{ item.slot_name }}</td>
+                    <td>{{ item.teacher_name }}</td>
+                    <td>{{ item.year_label }} · Section {{ item.section }}</td>
+                    <td>{{ item.room_name or "—" }}</td>
+
+                    <td>
+                        {% if item.slot_schedule_id %}
+                        <span class="status submitted">Master Slot</span>
+                        {% else %}
+                        <span class="status draft">Historical / Manual</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if item.has_attendance %}
+                        <span class="history-locked">Attendance history</span>
+                        {% else %}
+                        <form
+                            method="post"
+                            action="{{ url_for(
+                                'delete_timetable_entry',
+                                entry_id=item.id
+                            ) }}"
+                            onsubmit="return confirm(
+                                'Delete this unused timetable row?'
+                            );"
+                        >
+                            <button class="button danger small" type="submit">
+                                Delete Row
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9">
+                        No generated timetable rows yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

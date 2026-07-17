@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Manage Departments{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 1</div>
+        <h1>Departments</h1>
+        <p>Add university departments such as CSE, ECE and Mechanical.</p>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Add Department</h2>
+        <form method="post" class="admin-form">
+            <label>Department Code</label>
+            <input name="department_code" placeholder="Example: CSE" required>
+
+            <label>Department Name</label>
+            <input
+                name="department_name"
+                placeholder="Computer Science and Engineering"
+                required
+            >
+
+            <button class="button primary full" type="submit">
+                Add Department
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Existing Departments</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Department</th>
+                        <th>Classes</th>
+                        <th>Subjects</th>
+                        <th>Teachers</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in departments %}
+                    <tr>
+                        <td><strong>{{ item.department_code }}</strong></td>
+                        <td>{{ item.department_name }}</td>
+                        <td>{{ item.class_count }}</td>
+                        <td>{{ item.subject_count }}</td>
+                        <td>{{ item.teacher_count }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">No departments added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

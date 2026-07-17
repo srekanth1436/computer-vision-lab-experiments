@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Manage Teachers{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 4</div>
+        <h1>Teachers</h1>
+        <p>Create a secure login account and faculty profile.</p>
+    </div>
+</div>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Add Teacher</h2>
+        <form method="post" class="admin-form">
+            <label>Full Name</label>
+            <input name="full_name" placeholder="Dr. R. Jeena" required>
+
+            <label>Employee Number</label>
+            <input name="employee_no" placeholder="T001" required>
+
+            <label>Department</label>
+            <select name="department_id" required>
+                <option value="">Select department</option>
+                {% for item in departments %}
+                    <option value="{{ item.id }}">{{ item.department_code }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Login Username</label>
+            <input name="username" placeholder="jeena" required>
+
+            <label>Temporary Password</label>
+            <input type="password" name="password" minlength="6" required>
+
+            <button class="button primary full" type="submit">
+                Create Teacher Account
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Teacher Accounts</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee No.</th>
+                        <th>Teacher</th>
+                        <th>Username</th>
+                        <th>Department</th>
+                        <th>Courses</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in teachers %}
+                    <tr>
+                        <td>{{ item.employee_no }}</td>
+                        <td><strong>{{ item.full_name }}</strong></td>
+                        <td>{{ item.username }}</td>
+                        <td>{{ item.department_code }}</td>
+                        <td>{{ item.assigned_courses }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">No teachers added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

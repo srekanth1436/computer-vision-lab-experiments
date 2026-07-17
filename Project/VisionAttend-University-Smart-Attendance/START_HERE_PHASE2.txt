@@ -1,0 +1,63 @@
+UNIVERSITY SMART ATTENDANCE WEBSITE — PHASE 2
+==============================================
+
+PHASE 2 ADDS THE ADMIN BACKEND
+------------------------------
+1. Add departments.
+2. Add classes and sections.
+3. Add subjects.
+4. Create teacher accounts.
+5. Create student accounts.
+6. Assign subject + class + Slot A/B/C/D + teacher.
+7. Enrol one student or all students from the assigned class.
+8. Create weekly timetable entries.
+9. Teacher sees today's timetable.
+10. Draft, permission, submit and cancel attendance remain available.
+11. Student percentage still counts only Submitted classes.
+
+HOW TO UPDATE YOUR CURRENT PROJECT
+----------------------------------
+1. Stop Flask in VS Code using Ctrl+C.
+2. Make a backup copy of your current project folder.
+3. Copy all Phase 2 files into your existing
+   university_smart_attendance folder.
+4. Choose Replace the files in the destination.
+5. Keep XAMPP MySQL running.
+6. Run:
+
+   python init_db.py
+   python app.py
+
+7. Open:
+
+   http://127.0.0.1:5000
+
+8. Login as admin using your existing development account.
+
+ADMIN SETUP ORDER
+-----------------
+1. Departments
+2. Classes
+3. Subjects
+4. Teachers
+5. Students
+6. Courses
+7. Enrolments
+8. Timetable
+
+IMPORTANT FACE NOTE
+-------------------
+The website now manages student records, classes, slots and attendance.
+The existing OpenCV camera is still not connected in this phase.
+The next phase will connect the face recognizer with the active Draft
+attendance session.
+
+PERMISSION RULE
+---------------
+The teacher enters a required reason and marks Present with Permission.
+It counts only after Submit Attendance.
+
+DRAFT RULE
+----------
+If the teacher does not click Submit Attendance, that class remains Draft.
+It is not counted as Present, Absent, or a conducted class.

@@ -1,0 +1,70 @@
+PHASE 5 — MASTER SLOT TIMETABLE UPDATE
+======================================
+
+THIS IS AN UPDATE FOR YOUR CURRENT PHASE 4 FOLDER.
+DO NOT CREATE A NEW DATABASE.
+DO NOT DELETE DATASET OR TRAINER FILES.
+
+WHAT PHASE 5 ADDS
+-----------------
+1. Master timetable for Slot A, B, C and D.
+2. Add a slot day/time once.
+3. Automatically apply that timing to every course assigned to the slot.
+4. Automatically apply existing slot timings when a new course is created.
+5. Separate room/lab for each course assignment.
+6. Edit a master slot timing.
+7. Delete incorrect master timings.
+8. Delete unused generated timetable rows.
+9. Preserve rows that already have attendance history.
+10. Weekly slot timetable view.
+11. Synchronize All Courses button.
+
+SAFE UPDATE STEPS
+-----------------
+1. Stop Phase 4 with Ctrl+C.
+
+2. Extract this ZIP into:
+   D:\University_Smart_Attendance_Website_Phase4_Reports
+
+3. Choose:
+   Replace the files in the destination.
+
+4. Do not delete:
+   dataset
+   trainer
+
+5. Open the existing Phase 4 university_smart_attendance folder.
+
+6. Run:
+   python init_db.py
+
+7. Run:
+   python app.py
+
+8. Login as Admin and open Timetable.
+
+DATABASE SAFETY
+---------------
+python init_db.py upgrades the existing database.
+It preserves:
+- Students
+- Teachers
+- Departments
+- Classes
+- Subjects
+- Enrolments
+- Face registration flags
+- Attendance sessions
+- Attendance records
+- Reports
+
+OLD TIMETABLE MIGRATION
+-----------------------
+Existing manual timetable rows are converted into master slot rules.
+If an old test timing is wrong, delete it on the Master Slot Timetable page.
+Rows that already have attendance history remain protected.
+
+IMPORTANT FACE FILES
+--------------------
+Because this is an update inside the same Phase 4 project, your dataset and
+trainer folders stay in place. Do not make another empty phase folder.

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Teacher Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="heading">
+    <div>
+        <p class="eyebrow">TEACHER</p>
+        <h1>Welcome, {{ teacher.full_name }}</h1>
+        <p>{{ today.strftime('%A, %d %B %Y') }}</p>
+    </div>
+</div>
+
+<section class="panel">
+    <h2>Today's Timetable</h2>
+    <p>
+        Start attendance from the current subject card.
+        Attendance remains Draft until you submit it.
+    </p>
+
+    {% if todays_classes %}
+    <div class="class-grid">
+        {% for item in todays_classes %}
+        <article class="class-card slot-{{ item.slot_code|lower }}">
+            <div class="row">
+                <span class="pill">{{ item.slot_name }}</span>
+                <span class="status {{ item.session_status or 'not-started' }}">
+                    {% if item.session_status %}
+                        {{ item.session_status|title }}
+                    {% else %}
+                        Not Started
+                    {% endif %}
+                </span>
+            </div>
+
+            <h3>{{ item.subject_code }}</h3>
+            <h4>{{ item.subject_name }}</h4>
+
+            <p>
+                {{ item.class_name }} · {{ item.year_label }} ·
+                Section {{ item.section }}
+            </p>
+            <p>Class Time: {{ item.start_time }} – {{ item.end_time }}</p>
+            <p>Room: {{ item.room_name or 'Room not set' }}</p>
+
+            {% if item.session_id %}
+                <a class="btn white full"
+                   href="{{ url_for('attendance_session', session_id=item.session_id) }}">
+                    Open Attendance
+                </a>
+            {% else %}
+                <form method="post"
+                      action="{{ url_for('start_attendance', timetable_id=item.timetable_id) }}">
+                    <button class="btn white full" type="submit">
+                        Start Attendance
+                    </button>
+                </form>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No class is scheduled for today.</div>
+    {% endif %}
+</section>
+{% endblock %}

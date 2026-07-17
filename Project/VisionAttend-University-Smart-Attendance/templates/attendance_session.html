@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Session{% endblock %}
+{% block content %}
+<div class="heading">
+    <div>
+        <p class="eyebrow">{{ attendance.slot_name }}</p>
+        <h1>{{ attendance.subject_code }} - {{ attendance.subject_name }}</h1>
+        <p>
+            {{ attendance.class_name }} · {{ attendance.year_label }} ·
+            Section {{ attendance.section }}
+        </p>
+    </div>
+    <span class="status big {{ attendance.status }}">
+        {{ attendance.status|title }}
+    </span>
+</div>
+
+<div class="stats four">
+    <div><span>Face Present</span><b>{{ summary.present }}</b></div>
+    <div><span>Permission</span><b>{{ summary.permission }}</b></div>
+    <div><span>Absent</span><b>{{ summary.absent }}</b></div>
+    <div><span>Pending</span><b>{{ summary.pending }}</b></div>
+</div>
+
+{% if attendance.status == 'draft' %}
+<div class="notice">
+    <b>Draft rule:</b>
+    Nothing counts until the teacher clicks Submit Attendance.
+</div>
+
+<section class="panel verification-panel">
+    <div>
+        <h2>Real Face Verification</h2>
+        <p>
+            The camera checks only students enrolled in this subject and slot.
+            Recognized students are saved as Present in this Draft session.
+        </p>
+        <div class="verification-meta">
+            <span>Enrolled students: <b>{{ records|length }}</b></span>
+            <span>Face-ready students: <b>{{ face_ready_count }}</b></span>
+            <span>
+                Model:
+                <b>{% if face_model_exists %}Ready{% else %}Not Trained{% endif %}</b>
+            </span>
+        </div>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('recognize_session_faces', session_id=attendance.id) }}"
+          onsubmit="return confirm('Open the camera for a 10-minute face verification window?');">
+        <button class="btn primary verification-button" type="submit"
+                {% if not face_model_exists or face_ready_count == 0 %}disabled{% endif %}>
+            Start Face Verification
+        </button>
+    </form>
+</section>
+{% endif %}
+
+<section class="panel">
+    <h2>Students</h2>
+    <p>
+        Students recognized by the camera show Face Recognition.
+        A teacher can separately approve a genuine permission reason.
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Register No.</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Method / Reason</th>
+                {% if attendance.status == 'draft' %}<th>Permission Action</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record.register_no }}</td>
+            <td>{{ record.full_name }}</td>
+            <td>
+                <span class="status {{ record.status }}">
+                    {{ record.status.replace('_',' ')|title }}
+                </span>
+            </td>
+            <td>
+                {{ record.method.replace('_',' ')|title }}
+                {% if record.reason %}
+                    <div class="reason">{{ record.reason }}</div>
+                {% endif %}
+            </td>
+            {% if attendance.status == 'draft' %}
+            <td>
+                <form class="permission" method="post"
+                      action="{{ url_for('mark_permission', session_id=attendance.id, student_id=record.student_id) }}">
+                    <input name="reason" placeholder="Permission reason" required>
+                    <button class="btn warning small" type="submit">
+                        Permission Present
+                    </button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+{% if attendance.status == 'draft' %}
+<div class="final-actions">
+    <form method="post"
+          action="{{ url_for('submit_attendance', session_id=attendance.id) }}"
+          onsubmit="return confirm('Submit attendance? Pending students will become Absent.');">
+        <button class="btn success" type="submit">Submit Attendance</button>
+    </form>
+
+    <form class="cancel" method="post"
+          action="{{ url_for('cancel_attendance', session_id=attendance.id) }}">
+        <input name="reason" placeholder="Cancellation reason" required>
+        <button class="btn danger" type="submit">Cancel Class</button>
+    </form>
+</div>
+{% elif attendance.status == 'cancelled' %}
+<div class="notice danger-note">
+    Cancelled: {{ attendance.cancel_reason }}. This class is not counted.
+</div>
+{% else %}
+<div class="notice success-note">
+    Attendance is submitted and now counts in percentage.
+</div>
+{% endif %}
+{% endblock %}

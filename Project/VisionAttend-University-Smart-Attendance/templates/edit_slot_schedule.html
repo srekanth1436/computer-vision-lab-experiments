@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Edit Master Slot Timing{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">MASTER SLOT TIMETABLE</div>
+        <h1>Edit Slot Timing</h1>
+        <p>
+            Update the slot, weekday or time. Existing attendance history
+            remains unchanged.
+        </p>
+    </div>
+
+    <a class="button secondary" href="{{ url_for('manage_timetable') }}">
+        Back to Timetable
+    </a>
+</div>
+
+<section class="panel edit-slot-panel">
+    <form method="post" class="admin-form form-grid">
+        <div>
+            <label>Slot</label>
+            <select name="slot_id" required>
+                {% for item in slots %}
+                <option
+                    value="{{ item.id }}"
+                    {% if item.id == schedule.slot_id %}selected{% endif %}
+                >
+                    {{ item.slot_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Day</label>
+            <select name="day_of_week" required>
+                {% for day in DAY_NAMES %}
+                <option
+                    value="{{ loop.index0 }}"
+                    {% if loop.index0 == schedule.day_of_week %}selected{% endif %}
+                >
+                    {{ day }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Start Time</label>
+            <input
+                type="time"
+                name="start_time"
+                value="{{ schedule.start_time }}"
+                required
+            >
+        </div>
+
+        <div>
+            <label>End Time</label>
+            <input
+                type="time"
+                name="end_time"
+                value="{{ schedule.end_time }}"
+                required
+            >
+        </div>
+
+        <button class="button primary" type="submit">
+            Save Master Timing
+        </button>
+    </form>
+</section>
+{% endblock %}

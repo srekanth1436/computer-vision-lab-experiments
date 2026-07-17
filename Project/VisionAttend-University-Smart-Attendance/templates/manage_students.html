@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Manage Students{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMIN · STEP 5</div>
+        <h1>Students and Face Registration</h1>
+        <p>
+            Add students to the correct class, capture each face once,
+            and train one model for all registered students.
+        </p>
+    </div>
+</div>
+
+<section class="panel face-control-panel">
+    <div>
+        <h2>Face Recognition Model</h2>
+        <p>
+            Register the students first. After completing registrations,
+            train the model once. Train again whenever a new student is added.
+        </p>
+    </div>
+
+    <div class="face-model-actions">
+        {% if face_model_exists %}
+            <span class="status submitted">Model Available</span>
+        {% else %}
+            <span class="status draft">Model Not Trained</span>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('train_model_web') }}"
+              onsubmit="return confirm('Train the model using all captured faces?');">
+            <button class="button success" type="submit">
+                Train Face Model
+            </button>
+        </form>
+    </div>
+</section>
+
+<div class="management-layout">
+    <section class="panel form-panel">
+        <h2>Add Student</h2>
+        <form method="post" class="admin-form">
+            <label>Register Number</label>
+            <input name="register_no" placeholder="192372037" required>
+
+            <label>Student Name</label>
+            <input name="full_name" placeholder="V Sreekanth" required>
+
+            <label>Class</label>
+            <select name="class_id" required>
+                <option value="">Select class</option>
+                {% for item in classes %}
+                    <option value="{{ item.id }}">
+                        {{ item.department_code }} · {{ item.class_name }} ·
+                        {{ item.year_label }} · Section {{ item.section }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Login Username</label>
+            <input name="username" placeholder="sreekanth" required>
+
+            <label>Temporary Password</label>
+            <input type="password" name="password" minlength="6" required>
+
+            <button class="button primary full" type="submit">
+                Create Student Account
+            </button>
+        </form>
+    </section>
+
+    <section class="panel data-panel">
+        <h2>Student Accounts</h2>
+        <div class="notice">
+            Clicking <b>Register Face</b> opens the laptop/DroidCam window.
+            Capture 30 images and press Q only when registration is complete.
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Register No.</th>
+                        <th>Student</th>
+                        <th>Class</th>
+                        <th>Face Data</th>
+                        <th>Courses</th>
+                        <th>Face Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in students %}
+                    <tr>
+                        <td><strong>{{ item.register_no }}</strong></td>
+                        <td>{{ item.full_name }}</td>
+                        <td>
+                            {{ item.department_code }} · {{ item.year_label }} ·
+                            Section {{ item.section }}
+                        </td>
+                        <td>
+                            {% if item.face_ready %}
+                                <span class="status submitted">Ready</span>
+                            {% else %}
+                                <span class="status draft">Not Captured</span>
+                            {% endif %}
+                            <div class="reason">{{ item.face_images }} images</div>
+                        </td>
+                        <td>{{ item.enrolled_courses }}</td>
+                        <td>
+                            <form method="post"
+                                  action="{{ url_for('register_student_face', student_id=item.id) }}"
+                                  onsubmit="return confirm('Open camera and capture this student face?');">
+                                <button class="button primary small" type="submit">
+                                    {% if item.face_ready %}Register Again{% else %}Register Face{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6">No students added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

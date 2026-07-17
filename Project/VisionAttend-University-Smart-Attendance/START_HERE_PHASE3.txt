@@ -1,0 +1,67 @@
+UNIVERSITY SMART ATTENDANCE — PHASE 3 FACE VERIFICATION
+=======================================================
+
+WHAT THIS PHASE ADDS
+--------------------
+1. Admin -> Students -> Register Face.
+2. Local laptop/DroidCam camera captures 30 images.
+3. Admin -> Train Face Model.
+4. Teacher -> Attendance -> Start Face Verification.
+5. Only students enrolled in that course can receive attendance.
+6. Recognized students become Present in Draft.
+7. Permission Present still requires a reason.
+8. Present and Absent count only after Submit Attendance.
+
+INSTALL / UPDATE
+----------------
+1. Stop the existing Flask website with Ctrl+C.
+2. Keep XAMPP MySQL running.
+3. Open this Phase 3 university_smart_attendance folder in VS Code.
+4. Run:
+
+   python -m pip install -r requirements.txt
+   python init_db.py
+   python app.py
+
+5. Open:
+
+   http://127.0.0.1:5000
+
+FIRST FACE TEST
+---------------
+1. Login as Admin.
+2. Open Students.
+3. For Sreekanth, click Register Face.
+4. The DroidCam/laptop camera window opens.
+5. Look straight and slowly turn left and right.
+6. Wait until Captured: 30/30.
+7. Return to Students and click Train Face Model.
+8. Login as Teacher.
+9. Open the current Draft attendance session.
+10. Click Start Face Verification.
+11. Show Sreekanth's face.
+12. After the screen shows PRESENT - SAVED IN DRAFT, press Q.
+13. The attendance page should show Face Recognition and Present.
+14. Do not click Submit until the teacher has reviewed everyone.
+
+ADDING 40 STUDENTS
+------------------
+1. Add all 40 student accounts to the correct class.
+2. Enrol all students in the course.
+3. Register each face once.
+4. After all registrations, click Train Face Model once.
+5. Train again only when new face data is added or replaced.
+
+CAMERA HELP
+-----------
+- Start DroidCam before clicking Register Face or Start Face Verification.
+- Click the OpenCV camera window before pressing Q.
+- Q or Esc closes the camera.
+- If the camera does not close, return to the terminal and press Ctrl+C.
+
+IMPORTANT ACCURACY NOTE
+-----------------------
+This project uses LBPH for a local college capstone demonstration.
+For real university deployment, add liveness detection and use a modern
+embedding model such as ArcFace or FaceNet, with institutional approval
+and student consent for biometric data.
