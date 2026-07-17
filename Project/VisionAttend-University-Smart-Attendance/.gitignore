@@ -1,0 +1,11 @@
+dataset/*
+!dataset/.gitkeep
+
+trainer/*
+!trainer/.gitkeep
+
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/

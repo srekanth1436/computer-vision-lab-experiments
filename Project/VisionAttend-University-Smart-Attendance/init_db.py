@@ -220,17 +220,18 @@ def sync_all_slot_schedules(cursor):
 
 
 def main():
-    server = connect()
+    if config.MYSQL_CREATE_DATABASE:
+        server = connect()
 
-    try:
-        with server.cursor() as cursor:
-            cursor.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DATABASE}` "
-                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            )
-        server.commit()
-    finally:
-        server.close()
+        try:
+            with server.cursor() as cursor:
+                cursor.execute(
+                    f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DATABASE}` "
+                    "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                )
+            server.commit()
+        finally:
+            server.close()
 
     connection = connect(config.MYSQL_DATABASE)
 

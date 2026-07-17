@@ -30,10 +30,10 @@
 
 <section class="panel verification-panel">
     <div>
-        <h2>Real Face Verification</h2>
+        <h2>Browser Camera Face Verification</h2>
         <p>
-            The camera checks only students enrolled in this subject and slot.
-            Recognized students are saved as Present in this Draft session.
+            Use a laptop webcam, USB camera, DroidCam, or a phone camera.
+            Only enrolled students can receive attendance.
         </p>
         <div class="verification-meta">
             <span>Enrolled students: <b>{{ records|length }}</b></span>
@@ -45,14 +45,65 @@
         </div>
     </div>
 
-    <form method="post"
-          action="{{ url_for('recognize_session_faces', session_id=attendance.id) }}"
-          onsubmit="return confirm('Open the camera for a 10-minute face verification window?');">
-        <button class="btn primary verification-button" type="submit"
-                {% if not face_model_exists or face_ready_count == 0 %}disabled{% endif %}>
-            Start Face Verification
+    <button
+        class="btn primary verification-button"
+        type="button"
+        onclick="openVerificationCamera()"
+        {% if not face_model_exists or face_ready_count == 0 %}disabled{% endif %}
+    >
+        Open Browser Camera
+    </button>
+</section>
+
+<section id="verificationCameraPanel" class="panel browser-camera-panel" hidden>
+    <div class="browser-camera-heading">
+        <div>
+            <h2>Live Face Verification</h2>
+            <p>
+                Select a camera and start verification. It runs for up to
+                10 minutes or until you press Stop.
+            </p>
+        </div>
+        <button class="btn secondary small" type="button"
+                onclick="closeVerificationCamera()">
+            Close
         </button>
-    </form>
+    </div>
+
+    <div class="camera-controls">
+        <label for="verificationCameraSelect">Select Camera</label>
+        <select id="verificationCameraSelect"></select>
+        <button class="btn secondary" type="button"
+                onclick="switchVerificationCamera()">
+            Use Selected Camera
+        </button>
+    </div>
+
+    <div class="camera-preview">
+        <video id="verificationVideo" autoplay playsinline muted></video>
+        <canvas id="verificationCanvas" hidden></canvas>
+    </div>
+
+    <div id="verificationStatus" class="notice">
+        Allow camera permission, then press Start Verification.
+    </div>
+
+    <div class="camera-actions">
+        <button id="startVerificationButton"
+                class="btn primary"
+                type="button"
+                onclick="startContinuousVerification()">
+            Start Verification
+        </button>
+
+        <button id="stopVerificationButton"
+                class="btn danger"
+                type="button"
+                onclick="stopContinuousVerification(true)"
+                disabled>
+            Stop and Refresh
+        </button>
+    </div>
 </section>
 {% endif %}
 
@@ -130,5 +181,267 @@
 <div class="notice success-note">
     Attendance is submitted and now counts in percentage.
 </div>
+{% endif %}
+
+{% if attendance.status == 'draft' %}
+<style>
+.browser-camera-panel {
+    margin-top: 20px;
+}
+.browser-camera-heading,
+.camera-controls,
+.camera-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.camera-controls {
+    justify-content: flex-start;
+    margin: 18px 0;
+}
+.camera-controls select {
+    min-width: 260px;
+    padding: 10px;
+}
+.camera-preview {
+    max-width: 760px;
+    margin: 0 auto 16px;
+}
+.camera-preview video {
+    width: 100%;
+    max-height: 520px;
+    background: #0f172a;
+    border-radius: 14px;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+.camera-actions {
+    justify-content: flex-start;
+    margin-top: 16px;
+}
+</style>
+
+<script>
+const verificationSessionId = {{ attendance.id }};
+let verificationStream = null;
+let verificationRunning = false;
+let verificationDeadline = 0;
+let verificationTimer = null;
+const recognizedNames = new Set();
+
+const verificationPanel = document.getElementById("verificationCameraPanel");
+const verificationVideo = document.getElementById("verificationVideo");
+const verificationCanvas = document.getElementById("verificationCanvas");
+const verificationCameraSelect = document.getElementById("verificationCameraSelect");
+const verificationStatus = document.getElementById("verificationStatus");
+const startVerificationButton = document.getElementById("startVerificationButton");
+const stopVerificationButton = document.getElementById("stopVerificationButton");
+
+function wait(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function openVerificationCamera() {
+    verificationPanel.hidden = false;
+    verificationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    await startVerificationCamera();
+}
+
+function stopVerificationStream() {
+    if (verificationStream) {
+        verificationStream.getTracks().forEach(track => track.stop());
+        verificationStream = null;
+    }
+    verificationVideo.srcObject = null;
+}
+
+async function startVerificationCamera(deviceId = "") {
+    stopVerificationStream();
+
+    const videoConstraints = deviceId
+        ? { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+        : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+
+    try {
+        verificationStream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false
+        });
+
+        verificationVideo.srcObject = verificationStream;
+        await verificationVideo.play();
+        await loadVerificationCameras();
+
+        verificationStatus.textContent =
+            "Camera ready. Press Start Verification.";
+    } catch (error) {
+        verificationStatus.textContent =
+            `Camera could not start: ${error.message}`;
+    }
+}
+
+async function loadVerificationCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter(device => device.kind === "videoinput");
+    const activeDeviceId = verificationStream
+        ?.getVideoTracks()[0]
+        ?.getSettings()
+        ?.deviceId || "";
+
+    verificationCameraSelect.innerHTML = "";
+
+    cameras.forEach((camera, index) => {
+        const option = document.createElement("option");
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Camera ${index + 1}`;
+        option.selected = camera.deviceId === activeDeviceId;
+        verificationCameraSelect.appendChild(option);
+    });
+}
+
+async function switchVerificationCamera() {
+    if (verificationRunning) {
+        verificationStatus.textContent =
+            "Stop verification before changing the camera.";
+        return;
+    }
+
+    await startVerificationCamera(verificationCameraSelect.value);
+}
+
+function captureVerificationFrame() {
+    const width = 640;
+    const height = 480;
+
+    verificationCanvas.width = width;
+    verificationCanvas.height = height;
+
+    const context = verificationCanvas.getContext("2d");
+    context.drawImage(verificationVideo, 0, 0, width, height);
+
+    return verificationCanvas.toDataURL("image/jpeg", 0.72);
+}
+
+async function captureVerificationBatch() {
+    const images = [];
+
+    for (let index = 0; index < 7; index += 1) {
+        images.push(captureVerificationFrame());
+        await wait(220);
+    }
+
+    return images;
+}
+
+function timeRemainingText() {
+    const remainingMilliseconds = Math.max(0, verificationDeadline - Date.now());
+    const totalSeconds = Math.ceil(remainingMilliseconds / 1000);
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    return `${minutes}:${seconds}`;
+}
+
+async function runVerificationCycle() {
+    if (!verificationRunning) {
+        return;
+    }
+
+    if (Date.now() >= verificationDeadline) {
+        stopContinuousVerification(true);
+        return;
+    }
+
+    verificationStatus.textContent =
+        `Checking face... Time left ${timeRemainingText()}`;
+
+    try {
+        const images = await captureVerificationBatch();
+
+        const response = await fetch(
+            `/teacher/session/${verificationSessionId}/recognize-faces`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ images })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            verificationStatus.textContent = result.message;
+        } else {
+            (result.recognized_students || []).forEach(student => {
+                recognizedNames.add(
+                    `${student.full_name} (${student.register_no})`
+                );
+            });
+
+            const names = Array.from(recognizedNames);
+
+            verificationStatus.textContent = names.length
+                ? `Present saved in Draft: ${names.join(", ")}. Time left ${timeRemainingText()}`
+                : `${result.message} Time left ${timeRemainingText()}`;
+        }
+    } catch (error) {
+        verificationStatus.textContent =
+            `Verification error: ${error.message}`;
+    }
+
+    if (verificationRunning) {
+        verificationTimer = setTimeout(runVerificationCycle, 1200);
+    }
+}
+
+async function startContinuousVerification() {
+    if (!verificationStream) {
+        await startVerificationCamera();
+    }
+
+    if (!verificationStream) {
+        return;
+    }
+
+    verificationRunning = true;
+    verificationDeadline = Date.now() + (10 * 60 * 1000);
+    startVerificationButton.disabled = true;
+    stopVerificationButton.disabled = false;
+    recognizedNames.clear();
+
+    runVerificationCycle();
+}
+
+function stopContinuousVerification(refreshPage = false) {
+    verificationRunning = false;
+
+    if (verificationTimer) {
+        clearTimeout(verificationTimer);
+        verificationTimer = null;
+    }
+
+    startVerificationButton.disabled = false;
+    stopVerificationButton.disabled = true;
+    verificationStatus.textContent =
+        "Verification stopped. Recognized students are saved in Draft.";
+
+    if (refreshPage) {
+        stopVerificationStream();
+        window.location.reload();
+    }
+}
+
+function closeVerificationCamera() {
+    stopContinuousVerification(false);
+    stopVerificationStream();
+    verificationPanel.hidden = true;
+}
+
+window.addEventListener("beforeunload", () => {
+    verificationRunning = false;
+    stopVerificationStream();
+});
+</script>
 {% endif %}
 {% endblock %}

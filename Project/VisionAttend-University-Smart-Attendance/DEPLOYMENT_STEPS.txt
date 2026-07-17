@@ -1,0 +1,17 @@
+VISIONATTEND RAILWAY DEPLOYMENT FILES
+
+Copy these files into the VisionAttend project folder:
+- config.py
+- face_service.py
+- init_db.py
+- requirements.txt
+- database.sql
+- railway.toml
+- .gitignore
+
+Important:
+1. config.py is safe for GitHub because secrets come from environment variables.
+2. dataset photos and trainer.yml remain excluded from GitHub.
+3. Add a Railway Volume to the Flask service. Mount it at /data.
+4. Register faces and train the model again on the online site, because the new volume starts empty.
+5. Railway's MySQL service already creates its database, so MYSQL_CREATE_DATABASE stays false online.

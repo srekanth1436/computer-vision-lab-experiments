@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import os
 import re
 import time
@@ -8,10 +10,13 @@ from typing import Dict, Iterable
 
 import cv2
 
+import config
+
 
 BASE_DIR = Path(__file__).resolve().parent
-DATASET_DIR = BASE_DIR / "dataset"
-TRAINER_DIR = BASE_DIR / "trainer"
+DATA_ROOT = config.DATA_ROOT
+DATASET_DIR = DATA_ROOT / "dataset"
+TRAINER_DIR = DATA_ROOT / "trainer"
 MODEL_FILE = TRAINER_DIR / "trainer.yml"
 
 CAPTURE_IMAGE_COUNT = 30
@@ -470,4 +475,213 @@ def recognize_enrolled_students(
         "success": True,
         "recognized_ids": sorted(recognized_ids),
         "message": f"Face verification completed. Recognized: {len(recognized_ids)}.",
+    }
+
+
+def decode_browser_image(data_url: str):
+    """Convert a browser canvas data URL into an OpenCV BGR image."""
+
+    if not isinstance(data_url, str) or not data_url:
+        return None
+
+    try:
+        encoded = data_url.split(",", 1)[1] if "," in data_url else data_url
+        raw_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        return None
+
+    import numpy as np
+
+    buffer = np.frombuffer(raw_bytes, dtype=np.uint8)
+    return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
+
+
+def extract_largest_face(frame, detector):
+    """Detect and return the largest normalized grayscale face."""
+
+    if frame is None:
+        return None
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    faces = detector.detectMultiScale(
+        gray,
+        scaleFactor=1.2,
+        minNeighbors=5,
+        minSize=(100, 100),
+    )
+
+    if len(faces) == 0:
+        return None
+
+    x, y, width, height = max(
+        faces,
+        key=lambda box: box[2] * box[3],
+    )
+
+    face = gray[y:y + height, x:x + width]
+
+    if face.size == 0:
+        return None
+
+    return cv2.resize(face, (200, 200))
+
+
+def save_browser_face_registration(
+    student_id: int,
+    image_data_urls: Iterable[str],
+    target_count: int = CAPTURE_IMAGE_COUNT,
+) -> dict:
+    """
+    Save face images received from a browser camera.
+
+    Existing face data is replaced only after enough new valid faces
+    have been detected, so an unsuccessful registration does not erase
+    the student's previous usable dataset.
+    """
+
+    ensure_face_folders()
+    detector = load_face_detector()
+    valid_faces = []
+
+    for data_url in image_data_urls:
+        frame = decode_browser_image(data_url)
+        face = extract_largest_face(frame, detector)
+
+        if face is not None:
+            valid_faces.append(face)
+
+        if len(valid_faces) >= target_count:
+            break
+
+    if len(valid_faces) < MIN_CAPTURE_IMAGES:
+        return {
+            "success": False,
+            "captured": len(valid_faces),
+            "message": (
+                f"Only {len(valid_faces)} clear face images were detected. "
+                f"At least {MIN_CAPTURE_IMAGES} are required. "
+                "Keep the face inside the camera and try again."
+            ),
+        }
+
+    for old_file in student_face_files(student_id):
+        old_file.unlink(missing_ok=True)
+
+    for index, face in enumerate(valid_faces[:target_count], start=1):
+        output_file = DATASET_DIR / f"User.{student_id}.{index}.jpg"
+        cv2.imwrite(str(output_file), face)
+
+    saved_count = min(len(valid_faces), target_count)
+
+    return {
+        "success": True,
+        "captured": saved_count,
+        "message": (
+            f"Browser camera registration completed. "
+            f"Saved {saved_count} face images."
+        ),
+    }
+
+
+def recognize_browser_face_batches(
+    eligible_students: Dict[int, dict],
+    image_data_urls: Iterable[str],
+) -> dict:
+    """
+    Recognize enrolled students from a short browser-camera image batch.
+
+    The browser sends several frames. A student must be predicted in a
+    majority of valid frames before attendance is marked.
+    """
+
+    ensure_face_folders()
+
+    if not model_exists():
+        return {
+            "success": False,
+            "recognized_ids": [],
+            "message": "trainer/trainer.yml was not found. Train the model first.",
+        }
+
+    if not hasattr(cv2, "face"):
+        return {
+            "success": False,
+            "recognized_ids": [],
+            "message": "cv2.face is unavailable. Install opencv-contrib-python.",
+        }
+
+    if not eligible_students:
+        return {
+            "success": False,
+            "recognized_ids": [],
+            "message": "No face-registered students are enrolled in this class.",
+        }
+
+    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    recognizer.read(str(MODEL_FILE))
+    detector = load_face_detector()
+
+    prediction_counts: dict[int, int] = {}
+    valid_frame_count = 0
+
+    for data_url in image_data_urls:
+        frame = decode_browser_image(data_url)
+        face = extract_largest_face(frame, detector)
+
+        if face is None:
+            continue
+
+        valid_frame_count += 1
+        predicted_id, distance = recognizer.predict(face)
+
+        if (
+            distance < RECOGNITION_THRESHOLD
+            and predicted_id in eligible_students
+        ):
+            prediction_counts[predicted_id] = (
+                prediction_counts.get(predicted_id, 0) + 1
+            )
+
+    if valid_frame_count == 0:
+        return {
+            "success": False,
+            "recognized_ids": [],
+            "message": (
+                "No clear face was detected. Improve lighting, "
+                "face the camera and try again."
+            ),
+        }
+
+    required = max(
+        3,
+        min(
+            REQUIRED_CONFIRMATIONS,
+            valid_frame_count // 2 + 1,
+        ),
+    )
+
+    recognized_ids = sorted(
+        student_id
+        for student_id, count in prediction_counts.items()
+        if count >= required
+    )
+
+    if recognized_ids:
+        message = (
+            f"Face verification completed. "
+            f"Recognized {len(recognized_ids)} student(s)."
+        )
+    else:
+        message = (
+            "Face was not confirmed. Keep the face steady, "
+            "improve lighting and try again."
+        )
+
+    return {
+        "success": True,
+        "recognized_ids": recognized_ids,
+        "valid_frames": valid_frame_count,
+        "required_confirmations": required,
+        "message": message,
     }

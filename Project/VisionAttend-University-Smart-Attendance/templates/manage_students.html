@@ -6,8 +6,8 @@
         <div class="eyebrow">ADMIN · STEP 5</div>
         <h1>Students and Face Registration</h1>
         <p>
-            Add students to the correct class, capture each face once,
-            and train one model for all registered students.
+            Add students to the correct class, register faces using any
+            browser camera, and train one model for all registered students.
         </p>
     </div>
 </div>
@@ -16,8 +16,8 @@
     <div>
         <h2>Face Recognition Model</h2>
         <p>
-            Register the students first. After completing registrations,
-            train the model once. Train again whenever a new student is added.
+            Register students first. Train the model after completing
+            registrations and train again whenever a student is added.
         </p>
     </div>
 
@@ -73,8 +73,9 @@
     <section class="panel data-panel">
         <h2>Student Accounts</h2>
         <div class="notice">
-            Clicking <b>Register Face</b> opens the laptop/DroidCam window.
-            Capture 30 images and press Q only when registration is complete.
+            <b>Register Face</b> uses the selected browser camera.
+            Laptop webcams, USB webcams and DroidCam are supported.
+            On a phone, front and rear cameras can be selected.
         </div>
 
         <div class="table-wrap">
@@ -108,13 +109,21 @@
                         </td>
                         <td>{{ item.enrolled_courses }}</td>
                         <td>
-                            <form method="post"
-                                  action="{{ url_for('register_student_face', student_id=item.id) }}"
-                                  onsubmit="return confirm('Open camera and capture this student face?');">
-                                <button class="button primary small" type="submit">
-                                    {% if item.face_ready %}Register Again{% else %}Register Face{% endif %}
-                                </button>
-                            </form>
+                            <button
+                                class="button primary small"
+                                type="button"
+                                onclick='openRegistrationCamera(
+                                    {{ item.id }},
+                                    {{ item.full_name|tojson }},
+                                    {{ item.register_no|tojson }}
+                                )'
+                            >
+                                {% if item.face_ready %}
+                                    Register Again
+                                {% else %}
+                                    Register Face
+                                {% endif %}
+                            </button>
                         </td>
                     </tr>
                     {% else %}
@@ -125,4 +134,250 @@
         </div>
     </section>
 </div>
+
+<section id="registrationCameraPanel" class="panel browser-camera-panel" hidden>
+    <div class="browser-camera-heading">
+        <div>
+            <h2>Browser Camera Face Registration</h2>
+            <p id="registrationStudentText"></p>
+        </div>
+        <button class="button secondary small" type="button"
+                onclick="closeRegistrationCamera()">
+            Close
+        </button>
+    </div>
+
+    <div class="camera-controls">
+        <label for="registrationCameraSelect">Select Camera</label>
+        <select id="registrationCameraSelect"></select>
+        <button class="button secondary" type="button"
+                onclick="switchRegistrationCamera()">
+            Use Selected Camera
+        </button>
+    </div>
+
+    <div class="camera-preview">
+        <video id="registrationVideo" autoplay playsinline muted></video>
+        <canvas id="registrationCanvas" hidden></canvas>
+    </div>
+
+    <div class="camera-progress">
+        <div id="registrationProgressText">
+            Allow camera permission, keep one face in the frame and press Capture.
+        </div>
+        <progress id="registrationProgress" value="0" max="30"></progress>
+    </div>
+
+    <div class="camera-actions">
+        <button id="registrationCaptureButton"
+                class="button primary"
+                type="button"
+                onclick="captureRegistrationImages()">
+            Capture 30 Images
+        </button>
+    </div>
+</section>
+
+<style>
+.browser-camera-panel {
+    margin-top: 24px;
+}
+.browser-camera-heading,
+.camera-controls,
+.camera-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.camera-controls {
+    justify-content: flex-start;
+    margin: 18px 0;
+}
+.camera-controls select {
+    min-width: 260px;
+    padding: 10px;
+}
+.camera-preview {
+    max-width: 760px;
+    margin: 0 auto;
+}
+.camera-preview video {
+    width: 100%;
+    max-height: 520px;
+    background: #0f172a;
+    border-radius: 14px;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+.camera-progress {
+    max-width: 760px;
+    margin: 16px auto;
+}
+.camera-progress progress {
+    width: 100%;
+    height: 18px;
+    margin-top: 10px;
+}
+</style>
+
+<script>
+let registrationStream = null;
+let registrationStudentId = null;
+let registrationStudentName = "";
+let registrationRegisterNo = "";
+
+const registrationPanel = document.getElementById("registrationCameraPanel");
+const registrationVideo = document.getElementById("registrationVideo");
+const registrationCanvas = document.getElementById("registrationCanvas");
+const registrationCameraSelect = document.getElementById("registrationCameraSelect");
+const registrationProgress = document.getElementById("registrationProgress");
+const registrationProgressText = document.getElementById("registrationProgressText");
+const registrationCaptureButton = document.getElementById("registrationCaptureButton");
+
+async function openRegistrationCamera(studentId, studentName, registerNo) {
+    registrationStudentId = studentId;
+    registrationStudentName = studentName;
+    registrationRegisterNo = registerNo;
+
+    document.getElementById("registrationStudentText").textContent =
+        `${studentName} · Register No: ${registerNo}`;
+
+    registrationPanel.hidden = false;
+    registrationPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    await startRegistrationCamera();
+}
+
+function stopRegistrationStream() {
+    if (registrationStream) {
+        registrationStream.getTracks().forEach(track => track.stop());
+        registrationStream = null;
+    }
+    registrationVideo.srcObject = null;
+}
+
+async function startRegistrationCamera(deviceId = "") {
+    stopRegistrationStream();
+
+    const videoConstraints = deviceId
+        ? { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+        : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+
+    try {
+        registrationStream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false
+        });
+
+        registrationVideo.srcObject = registrationStream;
+        await registrationVideo.play();
+        await loadRegistrationCameras();
+
+        registrationProgressText.textContent =
+            "Camera ready. Keep one face clearly visible and press Capture 30 Images.";
+    } catch (error) {
+        registrationProgressText.textContent =
+            `Camera could not start: ${error.message}`;
+    }
+}
+
+async function loadRegistrationCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter(device => device.kind === "videoinput");
+    const activeDeviceId = registrationStream
+        ?.getVideoTracks()[0]
+        ?.getSettings()
+        ?.deviceId || "";
+
+    registrationCameraSelect.innerHTML = "";
+
+    cameras.forEach((camera, index) => {
+        const option = document.createElement("option");
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Camera ${index + 1}`;
+        option.selected = camera.deviceId === activeDeviceId;
+        registrationCameraSelect.appendChild(option);
+    });
+}
+
+async function switchRegistrationCamera() {
+    const selectedDeviceId = registrationCameraSelect.value;
+    await startRegistrationCamera(selectedDeviceId);
+}
+
+function captureRegistrationFrame() {
+    const width = 640;
+    const height = 480;
+
+    registrationCanvas.width = width;
+    registrationCanvas.height = height;
+
+    const context = registrationCanvas.getContext("2d");
+    context.drawImage(registrationVideo, 0, 0, width, height);
+
+    return registrationCanvas.toDataURL("image/jpeg", 0.72);
+}
+
+function wait(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function captureRegistrationImages() {
+    if (!registrationStream || !registrationStudentId) {
+        registrationProgressText.textContent = "Start the camera first.";
+        return;
+    }
+
+    registrationCaptureButton.disabled = true;
+    registrationProgress.value = 0;
+
+    const images = [];
+
+    for (let index = 1; index <= 30; index += 1) {
+        images.push(captureRegistrationFrame());
+        registrationProgress.value = index;
+        registrationProgressText.textContent =
+            `Capturing ${index}/30 — slowly turn left and right.`;
+        await wait(180);
+    }
+
+    registrationProgressText.textContent =
+        "Uploading and detecting clear face images...";
+
+    try {
+        const response = await fetch(
+            `/admin/students/${registrationStudentId}/register-face`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ images })
+            }
+        );
+
+        const result = await response.json();
+        registrationProgressText.textContent = result.message;
+
+        if (result.success) {
+            alert(result.message + " Now click Train Face Model.");
+            window.location.reload();
+        } else {
+            registrationCaptureButton.disabled = false;
+        }
+    } catch (error) {
+        registrationProgressText.textContent =
+            `Registration failed: ${error.message}`;
+        registrationCaptureButton.disabled = false;
+    }
+}
+
+function closeRegistrationCamera() {
+    stopRegistrationStream();
+    registrationPanel.hidden = true;
+    registrationStudentId = null;
+}
+
+window.addEventListener("beforeunload", stopRegistrationStream);
+</script>
 {% endblock %}

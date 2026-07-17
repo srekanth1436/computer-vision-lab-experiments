@@ -5,6 +5,7 @@ import pymysql
 from flask import (
     Flask,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -17,10 +18,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import config
 from face_service import (
     MODEL_FILE,
-    capture_student_faces,
     count_student_images,
     model_exists,
-    recognize_enrolled_students,
+    recognize_browser_face_batches,
+    save_browser_face_registration,
     train_face_model,
 )
 
@@ -445,7 +446,6 @@ def change_password():
         return redirect(url_for("login"))
 
     return render_template("change_password.html")
-
 
 @app.route("/dashboard")
 @login_required()
@@ -892,13 +892,27 @@ def register_student_face(student_id):
     )
 
     if not student:
-        flash("Student was not found.", "error")
-        return redirect(url_for("manage_students"))
+        return jsonify(
+            {
+                "success": False,
+                "message": "Student was not found.",
+            }
+        ), 404
 
-    result = capture_student_faces(
+    payload = request.get_json(silent=True) or {}
+    images = payload.get("images") or []
+
+    if not isinstance(images, list) or not images:
+        return jsonify(
+            {
+                "success": False,
+                "message": "No browser-camera images were received.",
+            }
+        ), 400
+
+    result = save_browser_face_registration(
         student_id=student["id"],
-        student_name=student["full_name"],
-        register_no=student["register_no"],
+        image_data_urls=images,
     )
 
     if result["success"]:
@@ -910,18 +924,13 @@ def register_student_face(student_id):
             """,
             (f"dataset/User.{student_id}.*.jpg", student_id),
         )
-        flash(
-            result["message"] + " Train the face model after registrations.",
-            "success",
-        )
     else:
         execute(
             "UPDATE students SET face_registered=0 WHERE id=%s",
             (student_id,),
         )
-        flash(result["message"], "error")
 
-    return redirect(url_for("manage_students"))
+    return jsonify(result)
 
 
 @app.post("/admin/train-face-model")
@@ -1888,16 +1897,39 @@ def recognize_session_faces(session_id):
     )
 
     if not attendance or attendance["user_id"] != session["user_id"]:
-        flash("Attendance session was not found.", "error")
-        return redirect(url_for("teacher_dashboard"))
+        return jsonify(
+            {
+                "success": False,
+                "message": "Attendance session was not found.",
+            }
+        ), 404
 
     if attendance["status"] != "draft":
-        flash("Only Draft attendance can use face verification.", "error")
-        return redirect(url_for("attendance_session", session_id=session_id))
+        return jsonify(
+            {
+                "success": False,
+                "message": "Only Draft attendance can use face verification.",
+            }
+        ), 400
 
     if not model_exists():
-        flash("Face model is not trained. Ask Admin to train the model.", "error")
-        return redirect(url_for("attendance_session", session_id=session_id))
+        return jsonify(
+            {
+                "success": False,
+                "message": "Face model is not trained. Ask Admin to train it.",
+            }
+        ), 400
+
+    payload = request.get_json(silent=True) or {}
+    images = payload.get("images") or []
+
+    if not isinstance(images, list) or not images:
+        return jsonify(
+            {
+                "success": False,
+                "message": "No browser-camera images were received.",
+            }
+        ), 400
 
     enrolled = query_all(
         """
@@ -1917,14 +1949,16 @@ def recognize_session_faces(session_id):
     }
 
     if not eligible_students:
-        flash(
-            "No enrolled students have enough captured face images.",
-            "error",
-        )
-        return redirect(url_for("attendance_session", session_id=session_id))
+        return jsonify(
+            {
+                "success": False,
+                "message": "No enrolled students have enough face images.",
+            }
+        ), 400
 
     opened_at = datetime.now()
     closes_at = opened_at + timedelta(minutes=10)
+
     execute(
         """
         UPDATE attendance_sessions
@@ -1934,16 +1968,19 @@ def recognize_session_faces(session_id):
         (opened_at, closes_at, session_id),
     )
 
-    result = recognize_enrolled_students(
+    result = recognize_browser_face_batches(
         eligible_students=eligible_students,
-        max_seconds=600,
+        image_data_urls=images,
     )
 
-    if result["success"] and result["recognized_ids"]:
+    recognized_ids = result.get("recognized_ids", [])
+
+    if result["success"] and recognized_ids:
         connection = get_db()
+
         try:
             with connection.cursor() as cursor:
-                for student_id in result["recognized_ids"]:
+                for student_id in recognized_ids:
                     cursor.execute(
                         """
                         UPDATE attendance_records
@@ -1953,23 +1990,37 @@ def recognize_session_faces(session_id):
                             marked_by=%s,
                             marked_at=NOW()
                         WHERE session_id=%s
-                            AND student_id=%s
-                            AND status IN ('pending', 'present')
+                          AND student_id=%s
+                          AND status IN ('pending', 'present')
                         """,
-                        (session["user_id"], session_id, student_id),
+                        (
+                            session["user_id"],
+                            session_id,
+                            student_id,
+                        ),
                     )
+
             connection.commit()
+
         except Exception:
             connection.rollback()
             raise
+
         finally:
             connection.close()
 
-    flash(
-        result["message"],
-        "success" if result["success"] else "error",
-    )
-    return redirect(url_for("attendance_session", session_id=session_id))
+    recognized_students = [
+        {
+            "id": student_id,
+            "register_no": eligible_students[student_id]["register_no"],
+            "full_name": eligible_students[student_id]["full_name"],
+        }
+        for student_id in recognized_ids
+        if student_id in eligible_students
+    ]
+
+    result["recognized_students"] = recognized_students
+    return jsonify(result)
 
 
 @app.post("/teacher/session/<int:session_id>/face/<int:student_id>")
